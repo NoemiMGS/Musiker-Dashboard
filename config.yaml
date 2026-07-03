@@ -1,0 +1,70 @@
+# =========================================================
+# Konfiguration für den Musiker-Ausschreibungs-Agenten
+# Diese Datei kannst du jederzeit anpassen, ohne Code zu ändern.
+# =========================================================
+
+standorte:
+  - name: "Regensburg"
+    lat: 49.0134
+    lon: 12.1016
+    radius_km: 100
+
+# Später weitere Standorte einfach ergänzen, z.B.:
+#  - name: "München"
+#    lat: 48.1351
+#    lon: 11.5820
+#    radius_km: 50
+
+profile:
+  # Diese Begriffe werden genutzt, um Treffer zu bewerten/filtern.
+  # Groß-/Kleinschreibung spielt keine Rolle.
+  genres:
+    - "Rock"
+    - "Pop"
+    - "Trio"
+    - "Jazz"
+    - "Pianist"
+    - "Klavier"
+    - "Piano"
+    - "Gitarre"
+    - "Alleinunterhalter"
+    - "Hochzeit"
+    - "Taufe"
+    - "Band"
+    - "Sänger"
+    - "Sängerin"
+    - "Gesang"
+
+  ausschluss_begriffe:
+    # Treffer mit diesen Begriffen werden aussortiert (Beispiele, gerne erweitern)
+    - "DJ gesucht"
+    - "Metal"
+    - "Punk"
+    - "Kein Geld"
+    - "ohne Gage"
+
+quellen:
+  backstagepro:
+    aktiv: true
+    beschreibung: "Gigbörse / Booking-Bereich, öffentliche Regional-Listen"
+  bandmix:
+    aktiv: true
+    beschreibung: "Musiker-gesucht-Kleinanzeigen"
+  musiker_sucht_musiker:
+    aktiv: true
+    beschreibung: "Musikerbörse"
+  musikersuche_net:
+    aktiv: true
+    beschreibung: "Buchungsanfragen-Plattform"
+  vergabe_bayern:
+    aktiv: true
+    beschreibung: "Öffentliche Ausschreibungen Vergabeplattform Bayern"
+  eventpeppers:
+    aktiv: false
+    beschreibung: "Niedrig priorisiert - primär Künstlerverzeichnis, selten Gesuche"
+
+einstellungen:
+  max_alter_tage: 30      # Treffer älter als X Tage werden ausgeblendet
+  user_agent: "MusikerAgent/1.0 (privater Recherche-Bot; Kontakt: DEINE-EMAIL@example.com)"
+  request_delay_sekunden: 2   # Wartezeit zwischen Anfragen (Netiquette)
+  respect_robots_txt: true
