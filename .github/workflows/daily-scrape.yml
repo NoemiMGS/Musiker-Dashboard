@@ -1,0 +1,41 @@
+
+name: Täglicher Musiker-Agent-Lauf
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v4
+
+      - name: Python einrichten
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Abhängigkeiten installieren
+        run: pip install -r requirements.txt
+
+      - name: Scraper ausführen
+        run: python scraper.py
+
+      - name: Ergebnisse für Dashboard bereitstellen
+        run: |
+          mkdir -p docs/data
+          cp data/results.json docs/data/results.json
+
+      - name: Änderungen committen
+        run: |
+          git config user.name "musiker-agent-bot"
+          git config user.email "actions@github.com"
+          git add data/results.json docs/data/results.json
+          git diff --quiet --cached || git commit -m "Automatisches Update: $(date -u +'%Y-%m-%d %H:%M UTC')"
+          git push
