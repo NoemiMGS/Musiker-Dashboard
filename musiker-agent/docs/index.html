@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Musiker-Ausschreibungen Dashboard</title>
+<style>
+  :root {
+    --navy: #0b2545;
+    --teal: #12877f;
+    --yellow: #f2b134;
+    --bg: #f7f9fb;
+    --card: #ffffff;
+    --text: #1a2433;
+    --muted: #6b7684;
+    --border: #e2e6ea;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+  header {
+    background: var(--navy);
+    color: white;
+    padding: 24px 32px;
+  }
+  header h1 { margin: 0 0 4px 0; font-size: 22px; }
+  header p { margin: 0; color: #b9c6da; font-size: 14px; }
+  .container { max-width: 1100px; margin: 0 auto; padding: 24px 16px 64px; }
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 20px;
+    align-items: center;
+  }
+  input[type="text"], select {
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 14px;
+  }
+  .badge {
+    background: var(--teal);
+    color: white;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .updated { color: var(--muted); font-size: 13px; margin-left: auto; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--card);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  th, td {
+    text-align: left;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+    vertical-align: top;
+  }
+  th {
+    background: #eef2f6;
+    color: var(--navy);
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 12px;
+    letter-spacing: 0.03em;
+  }
+  tr:hover { background: #fafcfe; }
+  .quelle-tag {
+    display: inline-block;
+    background: #eaf6f5;
+    color: var(--teal);
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  a.event-link { color: var(--navy); font-weight: 600; text-decoration: none; }
+  a.event-link:hover { text-decoration: underline; }
+  .relevanz {
+    display: inline-flex;
+    gap: 2px;
+  }
+  .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--border);
+  }
+  .dot.filled { background: var(--yellow); }
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted);
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>🎵 Musiker-Ausschreibungen Dashboard</h1>
+  <p>Automatisch tägliche Übersicht — Regensburg &amp; Umkreis</p>
+</header>
+<div class="container">
+  <div class="toolbar">
+    <input type="text" id="search" placeholder="Suche (Event, Ort, Quelle) ...">
+    <select id="quelleFilter">
+      <option value="">Alle Quellen</option>
+    </select>
+    <span class="badge" id="countBadge">0 Treffer</span>
+    <span class="updated" id="updatedText"></span>
+  </div>
+  <div id="tableWrap"></div>
+</div>
+
+<script>
+async function loadData() {
+  const res = await fetch('./data/results.json?_=' + Date.now());
+  return res.json();
+}
+
+function renderDots(relevanz) {
+  const max = 5;
+  let html = '<span class="relevanz">';
+  for (let i = 0; i < max; i++) {
+    html += `<span class="dot ${i < relevanz ? 'filled' : ''}"></span>`;
+  }
+  return html + '</span>';
+}
+
+function renderTable(treffer) {
+  if (treffer.length === 0) {
+    return '<div class="empty-state">Noch keine Treffer. Der Agent läuft täglich automatisch — schau später wieder vorbei.</div>';
+  }
+  let rows = treffer.map(t => `
+    <tr>
+      <td>
+        <span class="quelle-tag">${t.quelle}</span><br>
+        <a class="event-link" href="${t.link}" target="_blank" rel="noopener">${t.event}</a>
+      </td>
+      <td>${t.datum || 'unbekannt'}</td>
+      <td>${t.ort || ''}</td>
+      <td>${renderDots(t.relevanz || 0)}</td>
+      <td>${t.kontakt || ''}</td>
+    </tr>
+  `).join('');
+
+  return `
+    <table>
+      <thead>
+        <tr>
+          <th>Event</th>
+          <th>Datum</th>
+          <th>Ort</th>
+          <th>Relevanz</th>
+          <th>Kontakt</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+
+function populateFilter(treffer) {
+  const select = document.getElementById('quelleFilter');
+  const quellen = [...new Set(treffer.map(t => t.quelle))].sort();
+  quellen.forEach(q => {
+    const opt = document.createElement('option');
+    opt.value = q;
+    opt.textContent = q;
+    select.appendChild(opt);
+  });
+}
+
+let allTreffer = [];
+
+function applyFilters() {
+  const searchTerm = document.getElementById('search').value.toLowerCase();
+  const quelle = document.getElementById('quelleFilter').value;
+  const filtered = allTreffer.filter(t => {
+    const matchesSearch = !searchTerm ||
+      (t.event + ' ' + t.ort + ' ' + t.quelle).toLowerCase().includes(searchTerm);
+    const matchesQuelle = !quelle || t.quelle === quelle;
+    return matchesSearch && matchesQuelle;
+  });
+  document.getElementById('tableWrap').innerHTML = renderTable(filtered);
+  document.getElementById('countBadge').textContent = `${filtered.length} Treffer`;
+}
+
+loadData().then(data => {
+  allTreffer = data.treffer || [];
+  populateFilter(allTreffer);
+  applyFilters();
+
+  const updatedEl = document.getElementById('updatedText');
+  if (data.letzte_aktualisierung) {
+    const d = new Date(data.letzte_aktualisierung);
+    updatedEl.textContent = 'Zuletzt aktualisiert: ' + d.toLocaleString('de-DE');
+  } else {
+    updatedEl.textContent = 'Noch kein Lauf durchgeführt';
+  }
+
+  document.getElementById('search').addEventListener('input', applyFilters);
+  document.getElementById('quelleFilter').addEventListener('change', applyFilters);
+}).catch(err => {
+  document.getElementById('tableWrap').innerHTML =
+    '<div class="empty-state">Daten konnten nicht geladen werden. Läuft die GitHub Action bereits?</div>';
+  console.error(err);
+});
+</script>
+</body>
+</html>
