@@ -45,7 +45,11 @@ DELAY = CONFIG["einstellungen"]["request_delay_sekunden"]
 RESPECT_ROBOTS = CONFIG["einstellungen"]["respect_robots_txt"]
 MAX_AGE_DAYS = CONFIG["einstellungen"]["max_alter_tage"]
 
-HEADERS = {"User-Agent": USER_AGENT}
+HEADERS = {
+    "User-Agent": USER_AGENT,
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+    "Accept-Language": "de-DE,de;q=0.9,en;q=0.8",
+}
 
 _robots_cache = {}
 
@@ -170,8 +174,59 @@ def scrape_backstagepro():
 
 
 # ---------------------------------------------------------------------------
-# Quelle 2: BandMix.de (Musiker-gesucht-Kleinanzeigen)
+# Quelle 2b: Kleinanzeigen.de (Kategorie Künstler/Musiker, mit Radius-Filter)
 # ---------------------------------------------------------------------------
+def scrape_kleinanzeigen():
+    results = []
+    if not CONFIG["quellen"]["kleinanzeigen"]["aktiv"]:
+        return results
+
+    standort = CONFIG["standorte"][0]
+    radius = standort.get("radius_km", 50)
+    ort_slug = standort["name"].lower()
+
+    such_begriffe = ["musiker-gesucht", "musiker-sucht-musiker", "band-gesucht"]
+    for begriff in such_begriffe:
+        url = f"https://www.kleinanzeigen.de/s-{ort_slug}/{begriff}/k0l7636r{radius}"
+        html = fetch(url)
+        if not html:
+            log.warning(f"kleinanzeigen ('{begriff}'): keine HTML-Antwort erhalten.")
+            continue
+        soup = BeautifulSoup(html, "html.parser")
+
+        items = soup.select("article, .aditem, li.ad-listitem")
+        log.info(f"kleinanzeigen ('{begriff}'): {len(items)} Roh-Elemente gefunden.")
+        if len(items) == 0:
+            log.warning(f"kleinanzeigen ('{begriff}'): 0 Elemente. HTML-Ausschnitt:\n{html[:1500]}")
+
+        for item in items:
+            title_el = item.select_one("h2, h3, a")
+            if not title_el:
+                continue
+            title = title_el.get_text(strip=True)
+            link_el = item.find("a", href=True)
+            link = urljoin(url, link_el["href"]) if link_el else url
+            ort_el = item.select_one(".aditem-main--top--left, .ad-listitem-location")
+            ort_text = ort_el.get_text(strip=True) if ort_el else standort["name"]
+
+            if not title:
+                continue
+
+            results.append({
+                "id": make_id("kleinanzeigen", link),
+                "quelle": "Kleinanzeigen.de",
+                "event": title,
+                "datum": "unbekannt",
+                "ort": ort_text,
+                "link": link,
+                "kontakt": "über Kleinanzeigen-Nachricht (Login erforderlich)",
+                "relevanz": score_relevance(title),
+            })
+
+    return results
+
+
+
 def scrape_bandmix():
     results = []
     if not CONFIG["quellen"]["bandmix"]["aktiv"]:
@@ -359,6 +414,7 @@ def scrape_vergabe_bayern():
 # ---------------------------------------------------------------------------
 SCRAPERS = [
     scrape_backstagepro,
+    scrape_kleinanzeigen,
     scrape_bandmix,
     scrape_musiker_sucht_musiker,
     scrape_musikersuche_net,
