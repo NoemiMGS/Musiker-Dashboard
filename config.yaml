@@ -46,19 +46,22 @@ profile:
 quellen:
   backstagepro:
     aktiv: true
-    beschreibung: "Gigbörse / Booking-Bereich, öffentliche Regional-Listen"
+    beschreibung: "Booking-Bereich (/gigs) - Veranstalter suchen Acts. Ggf. bot-geschützt."
+  kleinanzeigen:
+    aktiv: true
+    beschreibung: "Kleinanzeigen.de, Kategorie Musiker/Künstler - echte Gesuche mit Radius-Filter"
   bandmix:
-    aktiv: true
-    beschreibung: "Musiker-gesucht-Kleinanzeigen"
+    aktiv: false
+    beschreibung: "DEAKTIVIERT: robots.txt verbietet automatisierten Zugriff. Zudem primär Musiker-sucht-Musiker, nicht Veranstalter-sucht-Act."
   musiker_sucht_musiker:
-    aktiv: true
-    beschreibung: "Musikerbörse"
+    aktiv: false
+    beschreibung: "DEAKTIVIERT: primär Musiker-sucht-Musiker/Bandmitglieder, nicht Veranstalter-sucht-Act."
   musikersuche_net:
-    aktiv: true
-    beschreibung: "Buchungsanfragen-Plattform"
+    aktiv: false
+    beschreibung: "DEAKTIVIERT: robots.txt verbietet automatisierten Zugriff."
   vergabe_bayern:
-    aktiv: true
-    beschreibung: "Öffentliche Ausschreibungen Vergabeplattform Bayern"
+    aktiv: false
+    beschreibung: "DEAKTIVIERT: URL-Struktur konnte nicht verifiziert werden (404), zudem JS-basiert und selten themenrelevant."
   eventpeppers:
     aktiv: false
     beschreibung: "Niedrig priorisiert - primär Künstlerverzeichnis, selten Gesuche"
