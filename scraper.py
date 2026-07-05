@@ -174,54 +174,62 @@ def scrape_backstagepro():
 
 
 # ---------------------------------------------------------------------------
-# Quelle 2b: Kleinanzeigen.de (Kategorie Künstler/Musiker, mit Radius-Filter)
+# Quelle 2b: musiker-in-deiner-stadt.de - Bereich "Veranstalter/Auftrittsmoeglichkeit"
+# Das ist die Quelle mit der richtigen Blickrichtung: hier inserieren
+# tatsächlich Veranstalter, die eine Band/einen Musiker für ihr Event suchen
+# (z.B. Taufen, Hochzeiten, Kneipennächte, Stadtfeste).
 # ---------------------------------------------------------------------------
-def scrape_kleinanzeigen():
+def scrape_musiker_in_deiner_stadt():
     results = []
-    if not CONFIG["quellen"]["kleinanzeigen"]["aktiv"]:
+    if not CONFIG["quellen"]["musiker_in_deiner_stadt"]["aktiv"]:
         return results
 
     standort = CONFIG["standorte"][0]
-    radius = standort.get("radius_km", 50)
     ort_slug = standort["name"].lower()
 
-    such_begriffe = ["musiker-gesucht", "musiker-sucht-musiker", "band-gesucht"]
-    for begriff in such_begriffe:
-        url = f"https://www.kleinanzeigen.de/s-{ort_slug}/{begriff}/k0l7636r{radius}"
-        html = fetch(url)
-        if not html:
-            log.warning(f"kleinanzeigen ('{begriff}'): keine HTML-Antwort erhalten.")
+    url = f"https://www.musiker-in-deiner-stadt.de/kleinanzeigen.finden/veranstalter-auftrittsmoeglichkeit-{ort_slug}"
+    html = fetch(url)
+    if not html:
+        log.warning("musiker_in_deiner_stadt: keine HTML-Antwort erhalten.")
+        return results
+    soup = BeautifulSoup(html, "html.parser")
+
+    # TODO: Selektor ggf. anpassen - Seite basiert auf älterem CMS (ColdFusion),
+    # Struktur konnte nicht 1:1 aus dem Quelltext verifiziert werden.
+    items = soup.select("article, .anzeige, .listing, .kleinanzeige, li")
+    log.info(f"musiker_in_deiner_stadt: {len(items)} Roh-Elemente gefunden.")
+    if len(items) == 0:
+        log.warning(f"musiker_in_deiner_stadt: 0 Elemente. HTML-Ausschnitt:\n{html[:2000]}")
+
+    for item in items:
+        # Der eigentliche Anzeigentitel steht in einer h3-Überschrift mit Link
+        title_el = item.select_one("h3 a, h3, a")
+        if not title_el:
             continue
-        soup = BeautifulSoup(html, "html.parser")
+        title = title_el.get_text(strip=True)
+        # Nur echte Anzeigentitel akzeptieren (Navigations-Links etc. aussortieren)
+        if not title or len(title) < 5:
+            continue
 
-        items = soup.select("article, .aditem, li.ad-listitem")
-        log.info(f"kleinanzeigen ('{begriff}'): {len(items)} Roh-Elemente gefunden.")
-        if len(items) == 0:
-            log.warning(f"kleinanzeigen ('{begriff}'): 0 Elemente. HTML-Ausschnitt:\n{html[:1500]}")
+        link_el = item.find("a", href=True)
+        link = urljoin(url, link_el["href"]) if link_el else url
 
-        for item in items:
-            title_el = item.select_one("h2, h3, a")
-            if not title_el:
-                continue
-            title = title_el.get_text(strip=True)
-            link_el = item.find("a", href=True)
-            link = urljoin(url, link_el["href"]) if link_el else url
-            ort_el = item.select_one(".aditem-main--top--left, .ad-listitem-location")
-            ort_text = ort_el.get_text(strip=True) if ort_el else standort["name"]
+        ort_el = item.find_previous(string=re.compile(r"[A-Za-zÄÖÜäöü]"))
+        ort_text = standort["name"]
 
-            if not title:
-                continue
+        datum_el = item.select_one("time, .datum")
+        datum_text = datum_el.get_text(strip=True) if datum_el else "unbekannt"
 
-            results.append({
-                "id": make_id("kleinanzeigen", link),
-                "quelle": "Kleinanzeigen.de",
-                "event": title,
-                "datum": "unbekannt",
-                "ort": ort_text,
-                "link": link,
-                "kontakt": "über Kleinanzeigen-Nachricht (Login erforderlich)",
-                "relevanz": score_relevance(title),
-            })
+        results.append({
+            "id": make_id("musiker_in_deiner_stadt", link),
+            "quelle": "musiker-in-deiner-stadt.de",
+            "event": title,
+            "datum": datum_text,
+            "ort": ort_text,
+            "link": link,
+            "kontakt": "über Kontaktformular auf der Anzeige (Login für Nachricht ggf. nötig)",
+            "relevanz": score_relevance(title),
+        })
 
     return results
 
@@ -414,7 +422,7 @@ def scrape_vergabe_bayern():
 # ---------------------------------------------------------------------------
 SCRAPERS = [
     scrape_backstagepro,
-    scrape_kleinanzeigen,
+    scrape_musiker_in_deiner_stadt,
     scrape_bandmix,
     scrape_musiker_sucht_musiker,
     scrape_musikersuche_net,
