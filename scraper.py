@@ -123,15 +123,22 @@ def scrape_backstagepro():
     if not CONFIG["quellen"]["backstagepro"]["aktiv"]:
         return results
 
-    # Regionale Musikersuche-Übersicht (öffentlich einsehbare Anzeigenliste)
-    url = "https://www.backstagepro.de/musikersuche/region/regensburg-by-de"
+    # Booking-Bereich: hier inserieren VERANSTALTER Gigs/Auftrittsmöglichkeiten
+    # (nicht zu verwechseln mit /musikersuche, wo Musiker Mitmusiker suchen!)
+    url = "https://www.backstagepro.de/gigs?city=Regensburg&city_lat=49.0134297&city_lon=12.1016236&radius=100"
     html = fetch(url)
     if not html:
+        log.warning("backstagepro: keine HTML-Antwort erhalten (siehe fetch()-Log oberhalb).")
         return results
     soup = BeautifulSoup(html, "html.parser")
 
     # TODO: Selektor ggf. anpassen, falls sich das Markup geändert hat.
-    for item in soup.select("article, .search-result, .list-item"):
+    items = soup.select("article, .search-result, .list-item, .gig-item")
+    log.info(f"backstagepro: {len(items)} Roh-Elemente über Selektor gefunden (vor Genre-Filter).")
+    if len(items) == 0:
+        log.warning(f"backstagepro: 0 Elemente gefunden. HTML-Ausschnitt zur Diagnose:\n{html[:1500]}")
+
+    for item in items:
         title_el = item.select_one("h2, h3, a")
         if not title_el:
             continue
@@ -173,10 +180,16 @@ def scrape_bandmix():
     url = "https://www.bandmix.de/musiker-gesucht/regensburg/"
     html = fetch(url)
     if not html:
+        log.warning("bandmix: keine HTML-Antwort erhalten (siehe fetch()-Log oberhalb).")
         return results
     soup = BeautifulSoup(html, "html.parser")
 
-    for item in soup.select(".ad, .listing-item, article"):
+    items = soup.select(".ad, .listing-item, article")
+    log.info(f"bandmix: {len(items)} Roh-Elemente über Selektor gefunden (vor Genre-Filter).")
+    if len(items) == 0:
+        log.warning(f"bandmix: 0 Elemente gefunden. HTML-Ausschnitt zur Diagnose:\n{html[:1500]}")
+
+    for item in items:
         title_el = item.select_one("h2, h3, a")
         if not title_el:
             continue
@@ -212,10 +225,16 @@ def scrape_musiker_sucht_musiker():
     url = "https://www.musiker-sucht-musiker.de/regensburg/"
     html = fetch(url)
     if not html:
+        log.warning("musiker-sucht-musiker: keine HTML-Antwort erhalten (siehe fetch()-Log oberhalb).")
         return results
     soup = BeautifulSoup(html, "html.parser")
 
-    for item in soup.select(".anzeige, .listing, article"):
+    items = soup.select(".anzeige, .listing, article")
+    log.info(f"musiker-sucht-musiker: {len(items)} Roh-Elemente über Selektor gefunden (vor Genre-Filter).")
+    if len(items) == 0:
+        log.warning(f"musiker-sucht-musiker: 0 Elemente gefunden. HTML-Ausschnitt zur Diagnose:\n{html[:1500]}")
+
+    for item in items:
         title_el = item.select_one("h2, h3, a")
         if not title_el:
             continue
@@ -251,10 +270,16 @@ def scrape_musikersuche_net():
     url = "https://www.musikersuche.net/anfragen/regensburg"
     html = fetch(url)
     if not html:
+        log.warning("musikersuche.net: keine HTML-Antwort erhalten (siehe fetch()-Log oberhalb).")
         return results
     soup = BeautifulSoup(html, "html.parser")
 
-    for item in soup.select(".request, .anfrage, article"):
+    items = soup.select(".request, .anfrage, article")
+    log.info(f"musikersuche.net: {len(items)} Roh-Elemente über Selektor gefunden (vor Genre-Filter).")
+    if len(items) == 0:
+        log.warning(f"musikersuche.net: 0 Elemente gefunden. HTML-Ausschnitt zur Diagnose:\n{html[:1500]}")
+
+    for item in items:
         title_el = item.select_one("h2, h3, a")
         if not title_el:
             continue
@@ -295,10 +320,16 @@ def scrape_vergabe_bayern():
         url = f"{base_url}?searchTerm={term.replace(' ', '+')}"
         html = fetch(url)
         if not html:
+            log.warning(f"vergabe_bayern ('{term}'): keine HTML-Antwort erhalten.")
             continue
         soup = BeautifulSoup(html, "html.parser")
 
-        for item in soup.select(".result-item, tr, article"):
+        items = soup.select(".result-item, tr, article")
+        log.info(f"vergabe_bayern ('{term}'): {len(items)} Roh-Elemente gefunden.")
+        if len(items) == 0:
+            log.warning(f"vergabe_bayern ('{term}'): 0 Elemente. HTML-Ausschnitt:\n{html[:1500]}")
+
+        for item in items:
             title_el = item.select_one("h2, h3, a, td")
             if not title_el:
                 continue
